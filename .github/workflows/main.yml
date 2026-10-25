@@ -71,9 +71,20 @@ jobs:
 
   keepalive:
     runs-on: ubuntu-latest
+    if: github.event_name == 'schedule'
     permissions:
-      actions: write
-      contents: read
+      contents: write
     steps:
       - uses: actions/checkout@v4
-      - uses: gautamkrishnar/keepalive-workflow@v2
+      - name: Create keepalive commit (only when the last commit is 50+ days old)
+        run: |
+          LAST=$(git log -1 --format=%ct)
+          NOW=$(date +%s)
+          AGE=$(( (NOW - LAST) / 86400 ))
+          echo "Last commit was $AGE days ago"
+          if [ "$AGE" -ge 50 ]; then
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git commit --allow-empty -m "chore: keepalive commit to keep scheduled workflows enabled"
+            git push
+          fi
